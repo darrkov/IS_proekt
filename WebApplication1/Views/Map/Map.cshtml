@@ -1,0 +1,162 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.css" />
+
+    <style>
+        .leaflet-control-geocoder-form {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+            .leaflet-control-geocoder-form input {
+                width: 100%; 
+                padding: 8px;
+                margin-bottom: 8px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+
+            .leaflet-control-geocoder-form button {
+                width: 100%;
+                padding: 8px;
+                background-color: #4CAF50;
+                color: #fff;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+            }
+
+        .leaflet-control-geocoder-form button:hover {
+            background-color: #45a049;
+        }
+
+        .text-center {
+            margin-top: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .legend {
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .legend-item {
+            margin-bottom: 5px;
+        }
+
+        .school-legend {
+            background-color: red;
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+        }
+
+    </style>
+
+}
+
+
+<div class="text-center">
+    <h1 class="display-4">Градско Планирање: Исклучување на Казина</h1>
+    <p>Со цел да се промовира одговорно урбанистичко планирање, 
+        на оваа карта е одредена црвена зона од 500 метри околу образовните институции. 
+        Казината и сличните установи се ограничени да бидат сместени во овие зони</p>
+</div>
+
+<div id="map" style="width: 800px; height: 600px; margin: 0 auto;"></div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.js"></script>
+
+
+    <script>
+
+        var schoolIcon = L.icon({
+            iconUrl: '/images/school4.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
+
+        var schools = @Html.Raw(Json.Serialize(ViewData["Schools"]));
+
+        console.log('Schools:', schools);
+
+
+        var map = L.map('map').setView([41.9973, 21.4280], 13);
+
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false
+        });
+
+
+        geocoder.on('markgeocode', function (e) {
+            var bbox = e.geocode.bbox;
+            var poly = L.polygon([
+                bbox.getSouthEast(),
+                bbox.getNorthEast(),
+                bbox.getNorthWest(),
+                bbox.getSouthWest()
+            ]).addTo(map);
+            map.fitBounds(poly.getBounds());
+        });
+
+
+        geocoder.addTo(map);
+        
+        function addCircleForSchool(lat, lon) {
+            L.circle([lat, lon], {
+                color: 'red',    
+                fillColor: 'red', 
+                fillOpacity: 0.3, 
+                radius: 500       
+            }).addTo(map);
+        }
+
+        schools.forEach(element => {
+            var lat = element.lat;
+            var lon = element.lon;
+
+            if (lat && lon) {
+                L.marker([lat, lon], { icon: schoolIcon }).addTo(map);
+                addCircleForSchool(lat, lon);
+            }
+        });
+
+        var legend = L.control({ position: 'topright' });
+
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML += '<div class="legend-item"><span class="school-legend"></span> Црвена зона од 500 метри</div>';
+            div.innerHTML += '<div class="legend-item">' +
+                '<img src="/images/school4.png" alt="Explanation Icon" class="icon" height="20" width="20">' +
+                '<span>Образовни институции</span>' +
+                '</div>'
+
+            return div;
+        };
+
+        legend.addTo(map);
+
+
+    </script>
+}
